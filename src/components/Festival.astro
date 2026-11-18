@@ -1,0 +1,47 @@
+---
+import type { Chapter } from '../data/story';
+import { photosFor } from '../lib/photos';
+import ChapterHead from './ChapterHead.astro';
+import PhotoStrip from './PhotoStrip.astro';
+import Wristband from './Wristband.astro';
+import Camcorder from './Camcorder.astro';
+import { videosFor } from '../lib/videos';
+
+interface Props { chapter: Chapter }
+const { chapter } = Astro.props;
+const photos = photosFor(chapter);
+const [video] = videosFor(chapter);
+---
+<section class="chapter" id={chapter.id}>
+  <ChapterHead chapter={chapter} />
+  {chapter.festival && <Wristband name={chapter.festival.name} dates={chapter.festival.dates} />}
+  {video && (
+    <Camcorder
+      video={video}
+      stamp={chapter.video?.stamp ?? String(chapter.year)}
+      caption={chapter.video?.caption}
+      sound={chapter.video?.sound ?? true}
+      label={`${chapter.title}, video`}
+    />
+  )}
+  {photos.length > 0 && (
+    <PhotoStrip
+      photos={photos}
+      chapter={chapter}
+      label={`${chapter.title} photos`}
+      alt={(i) => `${chapter.title}, photo ${i + 1}`}
+    />
+  )}
+  {(chapter.note || chapter.czech) && (
+    <div class="extras">
+      {chapter.note && <aside class="note px" style="--rot:1.5deg" data-speed=".03">{chapter.note}</aside>}
+      {chapter.czech && <p class="cz">{chapter.czech.text}<small>{chapter.czech.translation}</small></p>}
+    </div>
+  )}
+</section>
+
+<style>
+  section { max-width: none; }
+  section :global(.strip-wrap) { max-width: 980px; margin-inline: auto; }
+  section :global(.band) { margin-inline: calc(-1 * var(--gut)); }
+</style>

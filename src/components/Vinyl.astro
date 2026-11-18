@@ -1,0 +1,94 @@
+---
+import { story } from '../data/story';
+
+const { title, artist, spotify, hint, link } = story.song;
+const url = `https://open.spotify.com/track/${spotify}`;
+---
+<div class="vinyl" data-song={spotify}>
+  <button class="deck" type="button" aria-label={`Play ${title} by ${artist}`}>
+    <span class="record" aria-hidden="true">
+      <span class="disc-label"><b>{title}</b><i>{artist}</i></span>
+    </span>
+    <span class="sleeve" aria-hidden="true">
+      <span class="sleeve-title">our song</span>
+      <svg viewBox="0 0 100 100"><path d="M50 86 C 20 64, 4 44, 14 26 C 22 12, 42 12, 50 30 C 58 12, 78 12, 86 26 C 96 44, 80 64, 50 86Z" /></svg>
+    </span>
+    <span class="play" aria-hidden="true"></span>
+  </button>
+  <p class="hint">{hint}</p>
+  <div class="player"></div>
+  <a class="link" href={url} target="_blank" rel="noopener">{link}</a>
+</div>
+
+<script>
+  import { spotifyPlayer } from '../lib/spotify';
+
+  document.querySelectorAll<HTMLElement>('[data-song]').forEach((box) => {
+    const player = box.querySelector<HTMLElement>('.player')!;
+    const mount = document.createElement('div');
+    player.append(mount);
+    const spotify = spotifyPlayer(box, mount, `spotify:track:${box.dataset.song}`, 152);
+    box.querySelector('button')!.addEventListener('click', () => {
+      box.classList.add('open');
+      spotify.toggle();
+    });
+  });
+</script>
+
+<style>
+  .vinyl { display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 380px; margin: 70px auto 0; }
+  .deck {
+    all: unset; cursor: pointer; position: relative; display: block;
+    width: min(100%, 330px); height: 220px;
+  }
+  .deck:focus-visible { outline: 3px solid var(--red); outline-offset: 6px; }
+
+  .record {
+    position: absolute; top: 10px; left: 92px; width: 200px; height: 200px; border-radius: 50%;
+    background:
+      conic-gradient(from 30deg, transparent 0 10%, rgba(255, 255, 255, 0.12) 14%, transparent 20% 55%, rgba(255, 255, 255, 0.08) 60%, transparent 66%),
+      repeating-radial-gradient(circle, #141214 0 2px, #1f1b1e 2px 3px);
+    box-shadow: 0 14px 26px -12px rgba(0, 0, 0, 0.6);
+    transition: left 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .open .record { left: 118px; }
+  [data-state='playing'] .record, .open[data-state='loading'] .record { animation: spin 1.8s linear infinite; }
+  @keyframes spin { to { rotate: 360deg; } }
+  .disc-label {
+    position: absolute; inset: 62px; border-radius: 50%; display: grid; place-content: center; gap: 1px; text-align: center;
+    background: radial-gradient(circle, #1d1a1c 0 3px, transparent 3.5px), #f4a5b9;
+  }
+  .disc-label b { font: 700 0.78rem/1 var(--f-hand); color: #3a2228; padding: 0 6px; }
+  .disc-label i { font: 500 0.55rem var(--f-ui); font-style: normal; letter-spacing: 0.14em; text-transform: uppercase; color: #7a2e45; }
+
+  .sleeve {
+    position: absolute; top: 0; left: 0; width: 220px; height: 220px; z-index: 1;
+    display: flex; flex-direction: column; justify-content: flex-end; padding: 18px;
+    background:
+      repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 4px),
+      linear-gradient(150deg, #c93a4a, #8e2340);
+    box-shadow: 0 16px 28px -12px rgba(40, 25, 15, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    rotate: -3deg;
+  }
+  .sleeve-title { font: 700 2.4rem/1 var(--f-hand); color: #fbf3ee; }
+  .sleeve svg { position: absolute; top: 18px; right: 18px; width: 34px; height: 34px; fill: none; stroke: #fbf3ee; stroke-width: 5; stroke-linecap: round; }
+
+  .play {
+    position: absolute; left: 178px; bottom: -8px; z-index: 2; width: 46px; height: 46px; border-radius: 50%;
+    background: #fbfaf6; box-shadow: 0 6px 12px -4px rgba(0, 0, 0, 0.45);
+  }
+  .play::after {
+    content: ''; position: absolute; left: 18px; top: 14px;
+    border-left: 14px solid var(--red); border-top: 9px solid transparent; border-bottom: 9px solid transparent;
+  }
+  [data-state='playing'] .play::after { left: 16px; top: 15px; width: 5px; height: 16px; border: 0; background: var(--red); box-shadow: 9px 0 var(--red); }
+
+  .hint { font: 600 1.35rem/1.1 var(--f-hand); color: var(--pen); text-align: center; }
+  .player { width: 100%; height: 0; border-radius: 12px; transition: height 0.4s; overflow: hidden; box-shadow: 0 14px 26px -14px rgba(40, 25, 15, 0.6); }
+  .player :global(iframe) { display: block; width: 100%; border: 0; border-radius: 12px; }
+  .link { font: 600 1.3rem/1.1 var(--f-hand); color: var(--red); text-decoration: underline; text-underline-offset: 4px; }
+  .open .player { height: 152px; }
+  @media (prefers-reduced-motion: reduce) {
+    .record { animation: none !important; }
+  }
+</style>

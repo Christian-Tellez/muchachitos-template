@@ -1,0 +1,50 @@
+<script>
+  // Tap a polaroid to open it fullscreen; swipe between the photos of the same chapter.
+  import PhotoSwipeLightbox from 'photoswipe/lightbox';
+  import 'photoswipe/style.css';
+
+  const lightbox = new PhotoSwipeLightbox({
+    gallery: '[data-gallery]',
+    children: 'a.zoom',
+    pswpModule: () => import('photoswipe'),
+    showHideAnimationType: 'fade',
+    bgOpacity: 0.94,
+    wheelToZoom: true,
+    padding: { top: 24, bottom: 72, left: 0, right: 0 },
+  });
+
+  lightbox.on('uiRegister', () => {
+    lightbox.pswp?.ui?.registerElement({
+      name: 'handwritten-caption',
+      order: 9,
+      isButton: false,
+      appendTo: 'root',
+      onInit: (el, pswp) => {
+        pswp.on('change', () => {
+          const link = pswp.currSlide?.data.element as HTMLElement | undefined;
+          const caption = link?.dataset.caption ?? '';
+          const stamp = link?.querySelector('.stamp')?.textContent ?? '';
+          el.innerHTML = '';
+          if (caption) el.append(Object.assign(document.createElement('span'), { textContent: caption }));
+          if (stamp) el.append(Object.assign(document.createElement('small'), { textContent: stamp }));
+        });
+      },
+    });
+  });
+
+  lightbox.init();
+</script>
+
+<style is:global>
+  .pswp { --pswp-bg: #1a1013; }
+  .pswp__handwritten-caption {
+    position: absolute; left: 0; right: 0; bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    display: flex; flex-direction: column; align-items: center; gap: 2px; pointer-events: none;
+    text-align: center; padding: 0 16px;
+  }
+  .pswp__handwritten-caption span { font: 600 1.6rem/1.1 var(--f-hand); color: #fbf3ee; }
+  .pswp__handwritten-caption small {
+    font: 1.15rem/1 var(--f-stamp); letter-spacing: 0.05em;
+    color: var(--stamp); text-shadow: 0 0 6px rgba(255, 138, 42, 0.8);
+  }
+</style>

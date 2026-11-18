@@ -1,0 +1,104 @@
+---
+import { story } from '../data/story';
+
+const { name, spotify, youtubeMusic } = story.playlist;
+const spotifyUrl = `https://open.spotify.com/playlist/${spotify}`;
+const youtubeUrl = youtubeMusic && `https://music.youtube.com/playlist?list=${youtubeMusic}`;
+---
+<div class="mixtape" data-mixtape={spotify}>
+  <button class="cassette" type="button" aria-label={`Play ${name}`}>
+    <span class="sticker">
+      <span class="side">A</span>
+      <span class="name">{name}</span>
+      <span class="lines" aria-hidden="true"></span>
+    </span>
+    <span class="window" aria-hidden="true">
+      <i class="reel"></i><i class="tape-band"></i><i class="reel"></i>
+    </span>
+    <span class="play" aria-hidden="true"></span>
+  </button>
+  <p class="hint">press play while you scroll</p>
+  <div class="player"></div>
+  <p class="links">
+    <a class="label" href={spotifyUrl} target="_blank" rel="noopener">Open in Spotify ↗</a>
+    {youtubeUrl && <span aria-hidden="true">·</span>}
+    {youtubeUrl && <a class="label" href={youtubeUrl} target="_blank" rel="noopener">YouTube Music ↗</a>}
+  </p>
+</div>
+
+<script>
+  // The player warms up in the background when the block is near; a tap plays it.
+  // Without a Spotify login in the browser it plays 30-second previews, hence the app links.
+  import { spotifyPlayer } from '../lib/spotify';
+
+  document.querySelectorAll<HTMLElement>('[data-mixtape]').forEach((box) => {
+    const player = box.querySelector<HTMLElement>('.player')!;
+    const mount = document.createElement('div');
+    player.append(mount);
+    const spotify = spotifyPlayer(box, mount, `spotify:playlist:${box.dataset.mixtape}`, 352);
+    box.querySelector('button')!.addEventListener('click', () => {
+      box.classList.add('open');
+      spotify.toggle();
+    });
+  });
+</script>
+
+<style>
+  .mixtape { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 34px auto 0; max-width: 360px; }
+  .cassette {
+    all: unset; cursor: pointer; position: relative; box-sizing: border-box;
+    width: min(100%, 280px); aspect-ratio: 1.58; padding: 12px 14px 0; border-radius: 12px;
+    display: flex; flex-direction: column; align-items: center;
+    background:
+      radial-gradient(circle at 10px 10px, #6b4a52 0 2.5px, transparent 3px),
+      radial-gradient(circle at calc(100% - 10px) 10px, #6b4a52 0 2.5px, transparent 3px),
+      radial-gradient(circle at 10px calc(100% - 10px), #6b4a52 0 2.5px, transparent 3px),
+      radial-gradient(circle at calc(100% - 10px) calc(100% - 10px), #6b4a52 0 2.5px, transparent 3px),
+      linear-gradient(160deg, #3d2a30, #24181c);
+    box-shadow: 0 16px 28px -12px rgba(40, 25, 15, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    transition: translate 0.2s;
+  }
+  .cassette:hover { translate: 0 -2px; }
+  .cassette:focus-visible { outline: 3px solid var(--red); outline-offset: 4px; }
+  .sticker {
+    position: relative; width: 100%; height: 72%; border-radius: 6px; padding: 8px 12px;
+    background: linear-gradient(to bottom, var(--paper) 0 62%, #f4a5b9 62% 70%, var(--paper) 70%);
+  }
+  .side { position: absolute; left: 10px; top: 6px; font: 400 1.1rem var(--f-disp); color: var(--red); }
+  .name { display: block; text-align: center; font: 700 1.45rem/1.1 var(--f-hand); color: var(--blue-ink); }
+  .lines {
+    position: absolute; left: 30px; right: 30px; top: 40px; height: 12px;
+    background: repeating-linear-gradient(transparent 0 5px, rgba(44, 63, 124, 0.25) 5px 6px);
+  }
+  .window {
+    position: absolute; left: 22%; right: 22%; top: 46%; height: 26%; border-radius: 999px;
+    display: flex; align-items: center; justify-content: space-between; padding: 0 6px;
+    background: rgba(30, 20, 24, 0.88); box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+  }
+  .reel {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: conic-gradient(from 0deg, #f4efe6 0 8%, transparent 8% 25%, #f4efe6 25% 33%, transparent 33% 50%, #f4efe6 50% 58%, transparent 58% 75%, #f4efe6 75% 83%, transparent 83%), #5a3f46;
+    box-shadow: 0 0 0 3px #8a6a52;
+  }
+  .tape-band { flex: 1; height: 18px; margin: 0 4px; border-radius: 6px; background: #4a2f22; }
+  [data-state='playing'] .reel, .open[data-state='loading'] .reel { animation: spin 2.4s linear infinite; }
+  @keyframes spin { to { rotate: 360deg; } }
+  .play {
+    position: absolute; right: -12px; bottom: -12px; width: 46px; height: 46px; border-radius: 50%;
+    background: var(--red); box-shadow: 0 6px 12px -4px rgba(0, 0, 0, 0.45);
+  }
+  .play::after {
+    content: ''; position: absolute; left: 18px; top: 14px;
+    border-left: 14px solid #fff; border-top: 9px solid transparent; border-bottom: 9px solid transparent;
+  }
+  [data-state='playing'] .play::after { left: 16px; top: 15px; width: 5px; height: 16px; border: 0; background: #fff; box-shadow: 9px 0 #fff; }
+  .hint { font: 500 1.3rem/1 var(--f-hand); color: var(--pen); }
+  .open .hint { display: none; }
+  /* the iframe loads in advance inside a collapsed box, and unfolds on the first tap */
+  .player { width: 100%; height: 0; border-radius: 12px; transition: height 0.4s; overflow: hidden; box-shadow: 0 14px 26px -14px rgba(40, 25, 15, 0.6); }
+  .player :global(iframe) { display: block; width: 100%; border: 0; border-radius: 12px; }
+  .links { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 10px; color: var(--mute); }
+  .links a { color: var(--mute); text-decoration: underline; text-underline-offset: 3px; }
+  .open .player { height: 352px; }
+  @media (prefers-reduced-motion: reduce) { .reel { animation: none !important; } }
+</style>

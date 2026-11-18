@@ -1,0 +1,68 @@
+---
+import type { Chapter } from '../data/story';
+import { photosFor, stampFor } from '../lib/photos';
+import Polaroid from './Polaroid.astro';
+
+interface Props { chapter: Chapter; since: string }
+const { chapter, since } = Astro.props;
+const [main, ...rest] = photosFor(chapter);
+const [y, m] = chapter.id.split('-');
+const [, , d] = since.split('-');
+const alt = (i: number) => `${chapter.month} ${chapter.year}, photo ${i + 1}`;
+---
+<section class="night" id={chapter.id} data-night>
+  <canvas aria-hidden="true"></canvas>
+  <div class="in" data-gallery>
+    <div class="moon px" data-speed=".18"></div>
+    <p class="date">{d} · {m} · {y}</p>
+    <h2 class="h">{chapter.month}</h2>
+    <p class="t">{chapter.title}</p>
+    {main && (
+      <div class="hero-shot" data-p>
+        <Polaroid photo={main} stamp={stampFor(main, chapter)} alt={main.caption ?? alt(0)} rot={-2} sizes="(min-width: 820px) 340px, 80vw" />
+      </div>
+    )}
+    <p class="clock" data-clock={since}>&nbsp;</p>
+    <p class="cap">and counting</p>
+    {rest.length > 0 && (
+      <div class="duo">
+        {rest.map((p, i) => (
+          <Polaroid photo={p} stamp={stampFor(p, chapter)} alt={p.caption ?? alt(i + 1)} rot={i % 2 ? 3 : -3} speed={i % 2 ? 0.05 : -0.04} sizes="(min-width: 820px) 280px, 44vw" />
+        ))}
+      </div>
+    )}
+    {chapter.czech && <p class="czn">{chapter.czech.text}<small>{chapter.czech.translation}</small></p>}
+  </div>
+</section>
+
+<style>
+  .night {
+    position: relative; margin-top: 60px; padding: 140px var(--gut) 150px; color: var(--n-ink);
+    background: linear-gradient(to bottom, var(--bg) 0, var(--n-bg) 130px, var(--n-bg) calc(100% - 130px), var(--bg) 100%);
+  }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .in { position: relative; max-width: 640px; margin: 0 auto; text-align: center; }
+  .moon {
+    width: 96px; height: 96px; margin: 0 auto 34px; border-radius: 50%;
+    background: radial-gradient(circle at 36% 34%, #fff8e8, #f2dcae 45%, #c9a46a 78%);
+    box-shadow: 0 0 70px 14px rgba(255, 206, 140, 0.28), inset -14px -10px 30px rgba(120, 80, 40, 0.35);
+  }
+  .date { font: 400 0.74rem var(--f-mono); letter-spacing: 0.2em; color: var(--n-mute); }
+  .h { margin-top: 8px; font: italic 400 clamp(3.2rem, 16vw, 6.5rem)/0.95 var(--f-night); text-shadow: 0 0 28px rgba(255, 184, 113, 0.45); }
+  .t { margin-top: 4px; font: italic 400 1.4rem var(--f-night); color: var(--n-mute); }
+  .hero-shot { margin-top: 40px; }
+  .hero-shot :global(.pol) { width: min(80%, 340px); margin: 0 auto; box-shadow: 0 0 70px -4px rgba(255, 184, 113, 0.45); }
+  .hero-shot :global(img) {
+    filter: saturate(calc(0.3 + 0.7 * var(--pe, 1))) brightness(calc(0.55 + 0.45 * var(--pe, 1)));
+  }
+  .clock {
+    margin-top: 34px; font: 500 clamp(1rem, 4.6vw, 1.4rem) var(--f-mono); font-variant-numeric: tabular-nums;
+    color: var(--n-glow); text-shadow: 0 0 14px rgba(255, 184, 113, 0.5);
+  }
+  .cap { margin-top: 8px; font: 400 0.68rem var(--f-mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--n-mute); }
+  .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 50px; text-align: left; }
+  .duo :global(.pol:nth-child(2)) { margin-top: 50px; }
+  .duo :global(.pol) { box-shadow: 0 0 50px -10px rgba(255, 184, 113, 0.4); }
+  .czn { margin-top: 44px; font: italic 400 2.2rem var(--f-night); }
+  .czn small { display: block; margin-top: 6px; font: 400 0.68rem var(--f-mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--n-mute); }
+</style>

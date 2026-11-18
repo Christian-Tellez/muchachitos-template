@@ -1,0 +1,25 @@
+{
+  "name": "muchachitos-template",
+  "description": "A scroll-driven photo album for couples, month by month. Static, mobile-first, no backend.",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "author": "Christian Tellez (https://github.com/Christian-Tellez)",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "photos": "node scripts/prepare-photos.mjs",
+    "placeholders": "node scripts/placeholders.mjs",
+    "og": "node scripts/og.mjs"
+  },
+  "dependencies": {
+    "astro": "^7.4.7",
+    "photoswipe": "^5.4.4",
+    "sharp": "^0.35.5"
+  },
+  "devDependencies": {
+    "exifr": "^7.1.3"
+  }
+}

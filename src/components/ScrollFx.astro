@@ -1,0 +1,134 @@
+<script>
+  // Parallax ([data-speed] vertical, [data-xspeed] sideways), enter progress ([data-p] -> --pe),
+  // progress through a tall block ([data-through] -> --pt), pinned film strips ([data-pin]),
+  // star canvas in the night chapter ([data-night]) and live counters. Plain rAF, no libraries.
+  const rmq = matchMedia('(prefers-reduced-motion: reduce)');
+  const clamp = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
+  const speedEls = [...document.querySelectorAll<HTMLElement>('[data-speed]')];
+  const xspeedEls = [...document.querySelectorAll<HTMLElement>('[data-xspeed]')];
+  const throughEls = [...document.querySelectorAll<HTMLElement>('[data-through]')];
+  const progressEls = [...document.querySelectorAll<HTMLElement>('[data-p]')];
+  const pins = [...document.querySelectorAll<HTMLElement>('[data-pin]')];
+  // the birthday letter: pinned envelope, letter pulled out 1px per scrolled px
+  const pulls = [...document.querySelectorAll<HTMLElement>('[data-pull]')];
+
+  type Star = { x: number; y: number; z: number; r: number; a: number };
+  const nights = [...document.querySelectorAll<HTMLElement>('[data-night]')].map((el) => ({
+    el,
+    canvas: el.querySelector('canvas')!,
+    stars: Array.from({ length: 140 }, (): Star => ({
+      x: Math.random(), y: Math.random(), z: 0.2 + Math.random() * 0.8, r: 0.4 + Math.random() * 1.3, a: 0.3 + Math.random() * 0.7,
+    })),
+  }));
+
+  function layout() {
+    document.documentElement.classList.toggle('rm', rmq.matches);
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    for (const n of nights) {
+      n.canvas.width = n.el.clientWidth * dpr;
+      n.canvas.height = n.el.clientHeight * dpr;
+      n.canvas.getContext('2d')!.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    for (const sec of pulls) {
+      sec.classList.toggle('is-pulling', !rmq.matches);
+      if (rmq.matches) { sec.style.height = ''; continue; }
+      const letter = sec.querySelector<HTMLElement>('.letter')!;
+      const lift = letter.offsetHeight - 10;
+      sec.style.setProperty('--lift', `${lift}px`);
+      sec.style.height = `${innerHeight + lift / 0.88}px`;
+    }
+    for (const sec of pins) {
+      const track = sec.querySelector<HTMLElement>('.track')!;
+      if (rmq.matches) { sec.style.height = ''; track.style.transform = ''; continue; }
+      const dist = Math.max(0, track.scrollWidth - sec.clientWidth);
+      sec.dataset.dist = String(dist);
+      sec.style.height = `${innerHeight + dist}px`;
+    }
+  }
+
+  function drawStars(n: (typeof nights)[number], top: number) {
+    const ctx = n.canvas.getContext('2d')!;
+    const w = n.el.clientWidth, h = n.el.clientHeight, off = rmq.matches ? 0 : -top;
+    ctx.clearRect(0, 0, w, h);
+    for (const s of n.stars) {
+      const y = (((s.y * h - off * 0.15 * s.z) % h) + h) % h;
+      ctx.globalAlpha = s.a * clamp(Math.min(y, h - y) / 160);
+      ctx.fillStyle = s.z > 0.85 ? '#ffe2bd' : '#e8e2ff';
+      ctx.beginPath();
+      ctx.arc(s.x * w, y, s.r * s.z + 0.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  let ticking = false;
+  function tick() {
+    ticking = false;
+    const vh = innerHeight;
+    for (const n of nights) {
+      const r = n.el.getBoundingClientRect();
+      if (r.bottom > 0 && r.top < vh) drawStars(n, r.top);
+    }
+    if (rmq.matches) return;
+    for (const el of speedEls) {
+      const r = el.getBoundingClientRect();
+      const ty = parseFloat(el.dataset.ty || '0');
+      const v = (r.top + r.height / 2 - ty - vh / 2) * Number(el.dataset.speed);
+      el.dataset.ty = String(v);
+      el.style.setProperty('--ty', `${v.toFixed(1)}px`);
+    }
+    for (const el of xspeedEls) {
+      const r = el.getBoundingClientRect();
+      el.style.setProperty('--tx', `${((r.top + r.height / 2 - vh / 2) * Number(el.dataset.xspeed)).toFixed(1)}px`);
+    }
+    for (const el of throughEls) {
+      const r = el.getBoundingClientRect();
+      el.style.setProperty('--pt', clamp((vh * 0.5 - r.top) / r.height).toFixed(4));
+    }
+    for (const el of progressEls) {
+      // data-p=".selector" measures a descendant instead (e.g. the envelope inside its scene)
+      const target = (el.dataset.p && el.querySelector(el.dataset.p)) || el;
+      el.style.setProperty('--pe', clamp((vh - target.getBoundingClientRect().top) / (vh * 0.75)).toFixed(3));
+    }
+    for (const sec of pulls) {
+      const r = sec.getBoundingClientRect();
+      sec.style.setProperty('--pp', clamp(-r.top / Math.max(1, r.height - vh)).toFixed(4));
+    }
+    for (const sec of pins) {
+      const r = sec.getBoundingClientRect();
+      const p = clamp(-r.top / Math.max(1, r.height - vh));
+      sec.querySelector<HTMLElement>('.track')!.style.transform =
+        `translate3d(${(-p * Number(sec.dataset.dist || 0)).toFixed(1)}px,0,0)`;
+    }
+  }
+  const req = () => { if (!ticking) { ticking = true; requestAnimationFrame(tick); } };
+
+  addEventListener('scroll', req, { passive: true });
+  addEventListener('resize', () => { layout(); req(); });
+  rmq.addEventListener('change', () => {
+    for (const el of [...speedEls, ...xspeedEls, ...progressEls, ...throughEls]) {
+      el.style.removeProperty('--ty'); el.style.removeProperty('--tx'); el.style.removeProperty('--pe'); el.style.removeProperty('--pt');
+      el.dataset.ty = '0';
+    }
+    layout(); req();
+  });
+  // images load lazily and change heights: re-measure when they arrive
+  document.querySelectorAll('img').forEach((img) => img.addEventListener('load', () => { layout(); req(); }, { once: true }));
+  document.fonts?.ready.then(() => { layout(); req(); });
+  layout();
+  tick();
+
+  // counters
+  const pad = (n: number) => String(n).padStart(2, '0');
+  function counters() {
+    const now = Date.now();
+    document.querySelectorAll<HTMLElement>('[data-days]').forEach((el) => {
+      el.textContent = String(Math.floor((now - new Date(`${el.dataset.days}T00:00:00`).getTime()) / 864e5));
+    });
+    document.querySelectorAll<HTMLElement>('[data-clock]').forEach((el) => {
+      const ms = now - new Date(`${el.dataset.clock}T00:00:00`).getTime();
+      el.textContent = `${Math.floor(ms / 864e5)} d · ${pad(Math.floor(ms / 36e5) % 24)} h · ${pad(Math.floor(ms / 6e4) % 60)} min · ${pad(Math.floor(ms / 1e3) % 60)} s`;
+    });
+  }
+  counters();
+  setInterval(counters, 1000);
+</script>

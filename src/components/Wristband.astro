@@ -1,0 +1,34 @@
+---
+interface Props { name: string; dates: string }
+const { name, dates } = Astro.props;
+const text = Array.from({ length: 6 }, () => `${name} · ${dates}`).join(' · ');
+---
+<div class="band" aria-hidden="true">
+  <div class="strap px" data-xspeed="-.35">
+    <span>{text}</span>
+    <i class="clip"></i>
+  </div>
+</div>
+
+<style>
+  .band { position: relative; height: 70px; margin: 4px 0 6px; }
+  .strap {
+    position: absolute; left: -30vw; top: 12px; width: 190vw; height: 44px; rotate: -4deg;
+    display: flex; align-items: center; overflow: hidden;
+    background:
+      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.14) 0 1px, transparent 1px 3px),
+      repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.06) 0 1px, transparent 1px 4px),
+      linear-gradient(90deg, #e2477a, #f2a33a 25%, #2bb3a3 50%, #6b5bd6 75%, #e2477a);
+    box-shadow: 0 10px 18px -10px rgba(40, 25, 15, 0.6);
+  }
+  .strap span {
+    white-space: nowrap; padding-left: 24px;
+    font: 600 0.95rem/1 var(--f-ui); letter-spacing: 0.22em; text-transform: uppercase; color: #fff;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
+  }
+  .clip {
+    position: absolute; left: calc(30vw + 62%); top: -6px; width: 34px; height: 56px; border-radius: 8px;
+    background: linear-gradient(160deg, #f4f1ec, #c9c3bb); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+  .clip::after { content: ''; position: absolute; inset: 22px 9px; border-radius: 4px; background: #9b948b; }
+</style>

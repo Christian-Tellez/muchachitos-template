@@ -1,0 +1,64 @@
+---
+import { Image, getImage } from 'astro:assets';
+import type { Photo } from '../lib/photos';
+
+interface Props {
+  photo: Photo;
+  stamp: string;
+  alt: string;
+  rot?: number;
+  /** parallax speed; 0 = static */
+  speed?: number;
+  sizes?: string;
+  eager?: boolean;
+}
+const { photo, stamp, alt, rot = 0, speed = 0, sizes = '(min-width: 820px) 320px, 78vw', eager = false } = Astro.props;
+
+// Larger version for the fullscreen viewer
+const fullWidth = Math.min(photo.src.width, 1800);
+const fullHeight = Math.round((photo.src.height * fullWidth) / photo.src.width);
+const full = await getImage({ src: photo.src, width: fullWidth, format: 'webp' });
+---
+<figure class:list={['pol', { px: speed !== 0, 'has-secret': photo.secret }]} style={`--rot:${rot}deg`} data-speed={speed || undefined}>
+  <i class="tape"></i>
+  <!-- easter egg polaroids get a front and a back that flip (see Secrets.astro); the rest are one face -->
+  <div class:list={{ flipper: photo.secret }}>
+    <div class:list={{ face: photo.secret, front: photo.secret }}>
+      <a
+        class="shot zoom"
+        href={full.src}
+        data-pswp-width={fullWidth}
+        data-pswp-height={fullHeight}
+        data-caption={photo.caption}
+        aria-label={`Open photo: ${alt}`}
+      >
+        <Image
+          src={photo.src}
+          alt={alt}
+          widths={[400, 700, 1000]}
+          sizes={sizes}
+          loading={eager ? 'eager' : 'lazy'}
+        />
+        <span class="stamp">{stamp}</span>
+      </a>
+      <figcaption>{photo.caption}</figcaption>
+      {photo.secret && (
+        <button class="secret-heart" type="button" aria-label="Turn the photo over">
+          <svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 84 C 22 64, 8 46, 17 29 C 25 15, 43 17, 50 33 C 57 17, 76 14, 84 29 C 93 46, 78 64, 50 84" /></svg>
+        </button>
+      )}
+    </div>
+    {photo.secret && (
+      <button class="face back" type="button" aria-label="Turn the photo back">
+        <span class="back-text">{photo.secret}</span>
+        <span class="back-hint">tap to turn back ↺</span>
+      </button>
+    )}
+  </div>
+  {photo.comment && (
+    <span class="comment" data-style={photo.comment.style} data-fixed={photo.comment.fixed || undefined}>
+      <span class="comment-text">{photo.comment.text}</span>
+      <svg class="comment-arrow" viewBox="0 0 60 50" aria-hidden="true"><path d="M50 4 C 40 12, 24 14, 14 36 M14 36 L 9 23 M14 36 L 27 31" /></svg>
+    </span>
+  )}
+</figure>

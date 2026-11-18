@@ -1,0 +1,145 @@
+---
+import type { Chapter } from '../data/story';
+import { story } from '../data/story';
+import { Image, getImage } from 'astro:assets';
+import { photosFor } from '../lib/photos';
+import ChapterHead from './ChapterHead.astro';
+
+interface Props { chapter: Chapter }
+const { chapter } = Astro.props;
+const fmt = (iso: string, opts: Intl.DateTimeFormatOptions) =>
+  new Date(`${iso}T12:00:00`).toLocaleDateString('en-GB', opts);
+const firstMessage = fmt(story.firstMessage, { day: 'numeric', month: 'short', year: 'numeric' });
+const firstDate = new Date(`${story.firstDate}T12:00:00`);
+const weekday = fmt(story.firstDate, { weekday: 'short' }).toUpperCase();
+const dotted = [firstDate.getDate(), firstDate.getMonth() + 1, firstDate.getFullYear()]
+  .map((n) => String(n).padStart(2, '0')).join('.');
+
+// First-date photos as photobooth strips (two strips when there are more than 4)
+const photos = photosFor(chapter);
+const half = Math.ceil(photos.length / 2);
+const strips = photos.length > 4 ? [photos.slice(0, half), photos.slice(half)] : photos.length ? [photos] : [];
+const full = new Map(
+  await Promise.all(
+    photos.map(async (p) => {
+      const width = Math.min(p.src.width, 1800);
+      const img = await getImage({ src: p.src, width, format: 'webp' });
+      return [p.key, { src: img.src, width, height: Math.round((p.src.height * width) / p.src.width) }] as const;
+    }),
+  ),
+);
+const clock = (hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`;
+};
+---
+<section class="chapter" id={chapter.id}>
+  <ChapterHead chapter={chapter} />
+  <div class="jan">
+    <div class="chat">
+      <p class="label chat-day">{firstMessage} · the first message</p>
+      {chapter.messages?.map((m) => <div class:list={['bubble', m.from]}>{m.text}</div>)}
+    </div>
+    <div class="keepsakes">
+      <div class="ticket px" style="--rot:-3deg" data-speed=".04">
+        <div class="main">
+          <p class="k">Admit two</p>
+          <p class="v">First date</p>
+          <p class="d">{weekday} {dotted}</p>
+        </div>
+        <div class="stub">No. 000001</div>
+      </div>
+
+      {strips.length > 0 && (
+        <div class="booth" data-gallery data-tone={story.firstDateTone}>
+          {strips.map((strip, si) => (
+            <div class="strip px" style={`--rot:${si ? 5 : -4}deg`} data-speed={si ? 0.05 : -0.03}>
+              {si === 0 && <i class="clip" aria-hidden="true"></i>}
+              {strip.map((p, i) => {
+                const f = full.get(p.key)!;
+                return (
+                  <figure class="frame" data-p>
+                    <a class="zoom" href={f.src} data-pswp-width={f.width} data-pswp-height={f.height} data-caption={p.time ? clock(p.time) : undefined} aria-label="Open photo">
+                      <Image src={p.src} alt={`Our first date, photo ${si * half + i + 1}`} widths={[300, 500, 700]} sizes="(min-width: 820px) 200px, 40vw" />
+                    </a>
+                    {p.time && <figcaption>{clock(p.time)}</figcaption>}
+                  </figure>
+                );
+              })}
+              <p class="foot">{dotted}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+
+</section>
+
+
+<style>
+  .jan { display: flex; flex-direction: column; gap: 40px; max-width: 980px; margin: 0 auto; }
+  .chat { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 340px; margin: 0 auto; font: 400 0.95rem/1.35 system-ui, sans-serif; }
+  .chat-day { text-align: center; margin-bottom: 6px; }
+  .bubble { max-width: 78%; padding: 9px 13px; border-radius: 18px; box-shadow: 0 4px 10px -6px rgba(0, 0, 0, 0.4); }
+  .her { align-self: flex-start; background: #e9e9eb; color: #111; border-bottom-left-radius: 5px; }
+  .me { align-self: flex-end; background: #2f7cf6; color: #fff; border-bottom-right-radius: 5px; }
+  .keepsakes { display: flex; flex-direction: column; align-items: center; gap: 34px; }
+  .ticket {
+    align-self: center; width: min(92%, 360px); display: grid; grid-template-columns: 1fr auto;
+    color: #2a2420; background: #f6e7c8; box-shadow: 0 12px 24px -12px rgba(0, 0, 0, 0.5);
+    -webkit-mask: radial-gradient(circle 11px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat,
+      radial-gradient(circle 11px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+    mask: radial-gradient(circle 11px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat,
+      radial-gradient(circle 11px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+  }
+  .main { padding: 16px 18px 16px 24px; border-right: 2px dashed rgba(42, 36, 32, 0.35); }
+  .k { font: 500 0.62rem var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: #8a3b2c; }
+  .v { margin-top: 4px; font: 400 1.7rem/1.05 var(--f-disp); }
+  .d { margin-top: 6px; font: 1.2rem var(--f-stamp); }
+  .stub { padding: 16px 22px 16px 14px; display: grid; place-items: center; writing-mode: vertical-rl; font: 1.1rem/1.1 var(--f-stamp); letter-spacing: 0.08em; color: #8a3b2c; }
+  /* photobooth strips that develop as they scroll in, with the time each photo was taken */
+  /* --tone: the colour look; the "developing" part (washed out → normal) comes from --pe */
+  .booth { display: flex; justify-content: center; align-items: flex-start; gap: 14px; width: 100%; --tone: saturate(1); --overlay: none; }
+  .booth[data-tone='film'] {
+    --tone: sepia(0.16) saturate(0.88) contrast(0.92) brightness(1.04);
+    --overlay: linear-gradient(160deg, rgba(255, 196, 140, 0.32), rgba(120, 90, 160, 0.18));
+  }
+  .booth[data-tone='flash'] {
+    --tone: brightness(1.08) contrast(1.12) saturate(1.06);
+    --overlay: radial-gradient(ellipse at 50% 42%, rgba(255, 255, 255, 0.28), transparent 55%, rgba(0, 0, 0, 0.42));
+  }
+  .strip {
+    position: relative; width: min(42%, 190px); padding: 8px 8px 0; display: flex; flex-direction: column; gap: 4px;
+    background: #fbfaf6; box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08), 0 14px 26px -10px rgba(40, 25, 15, 0.5);
+  }
+  .strip + .strip { margin-top: 46px; }
+  .frame a { position: relative; display: block; overflow: hidden; cursor: zoom-in; -webkit-tap-highlight-color: transparent; }
+  /* --d: how developed the photo is. It starts a little after the frame enters the screen and
+     takes most of the screen height, so the "instant photo" moment is easy to notice */
+  .frame { --d: clamp(0, calc((var(--pe, 1) - 0.08) / 0.85), 1); }
+  .frame a::before {
+    content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 45%, #f6efe2, #e9dcc6);
+    opacity: calc((1 - var(--d)) * 0.92);
+  }
+  .frame a::after { content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; background: var(--overlay); mix-blend-mode: soft-light; }
+  .frame a:focus-visible { outline: 3px solid var(--red); outline-offset: 2px; }
+  .frame img {
+    display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; background: #e9e4dc;
+    filter: var(--tone)
+      blur(calc((1 - var(--d)) * 7px))
+      saturate(var(--d))
+      contrast(calc(0.25 + 0.75 * var(--d)))
+      brightness(calc(2.2 - 1.2 * var(--d)));
+  }
+  .frame figcaption { padding: 2px 2px 4px; text-align: right; font: 600 1.05rem/1 var(--f-hand); color: var(--blue-ink); }
+  .foot { padding: 6px 0 10px; text-align: center; font: 0.95rem/1 var(--f-stamp); letter-spacing: 0.12em; color: rgba(42, 36, 32, 0.55); }
+  .clip {
+    position: absolute; top: -22px; left: 18px; z-index: 2; width: 18px; height: 52px; rotate: -8deg;
+    border: 3px solid #9aa0a8; border-radius: 10px; border-bottom-color: transparent;
+  }
+  @media (min-width: 820px) {
+    .jan { display: grid; grid-template-columns: 1fr 1fr; align-items: center; }
+  }
+</style>

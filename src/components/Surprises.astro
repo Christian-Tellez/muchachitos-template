@@ -1,0 +1,136 @@
+---
+import { story } from '../data/story';
+---
+<!--
+  Date surprises, on her local date:
+  - her birthday: fullscreen "Všechno nejlepší!" card with confetti
+  - his birthday (23 March): the same card, "¡Feliz cumple!"
+  - the 4th of every month after the official date: a small "happy N months" note
+  Preview any day with ?surprise=birthday, ?surprise=his-birthday or ?surprise=monthly
+-->
+<div class="bday" hidden role="dialog" aria-label="Happy birthday">
+  <canvas aria-hidden="true"></canvas>
+  <div class="bday-card">
+    <p class="bday-cz">Všechno nejlepší!</p>
+    <p class="bday-en">happy birthday, {story.her} {story.emoji}</p>
+    <button type="button">open your album →</button>
+  </div>
+</div>
+<p class="monthly" hidden role="status"></p>
+
+<script define:vars={{ birthday: story.birthday, me: story.me, emoji: story.emoji, official: story.official }}>
+  const params = new URLSearchParams(location.search);
+  const preview = params.get('surprise');
+  const now = new Date();
+  const start = new Date(`${official}T00:00:00`);
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const isDay = (d) => now.getMonth() + 1 === d.month && now.getDate() === d.day;
+  const isHis = preview === 'his-birthday' || (!preview && isDay(me.birthday));
+  const isBirthday = isHis || preview === 'birthday' || (!preview && isDay(birthday));
+  const months = (now.getFullYear() - start.getFullYear()) * 12 + now.getMonth() - start.getMonth();
+  const isMonthly = preview === 'monthly' || (now.getDate() === start.getDate() && months > 0 && now > start);
+
+  if (isBirthday) {
+    const box = document.querySelector('.bday');
+    if (isHis) {
+      box.querySelector('.bday-cz').textContent = me.title;
+      box.querySelector('.bday-en').textContent = me.text;
+    }
+    box.hidden = false;
+    document.documentElement.style.overflow = 'hidden';
+    const close = () => {
+      box.classList.add('out');
+      document.documentElement.style.overflow = '';
+      setTimeout(() => (box.hidden = true), 500);
+    };
+    box.querySelector('button').addEventListener('click', close);
+    if (!reduced) confetti(box.querySelector('canvas'));
+  } else if (isMonthly) {
+    const n = preview === 'monthly' ? Math.max(months, 1) : months;
+    const years = n % 12 === 0 ? n / 12 : 0;
+    const note = document.querySelector('.monthly');
+    note.textContent = years ? `happy ${years} year${years > 1 ? 's' : ''} ${emoji}` : `happy ${n} months ${emoji}`;
+    note.hidden = false;
+    setTimeout(() => note.classList.add('out'), 6000);
+  }
+
+  function confetti(canvas) {
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    const resize = () => {
+      canvas.width = innerWidth * dpr;
+      canvas.height = innerHeight * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    resize();
+    addEventListener('resize', resize);
+    const colors = ['#b02a3c', '#f4a5b9', '#96d4be', '#ffd76a', '#2c3f7c', '#fbfaf6'];
+    const bits = Array.from({ length: 160 }, () => ({
+      x: Math.random() * innerWidth,
+      y: -20 - Math.random() * innerHeight,
+      vx: (Math.random() - 0.5) * 1.2,
+      vy: 1.5 + Math.random() * 2.5,
+      r: Math.random() * Math.PI,
+      vr: (Math.random() - 0.5) * 0.2,
+      w: 6 + Math.random() * 6,
+      h: 8 + Math.random() * 8,
+      c: colors[Math.floor(Math.random() * colors.length)],
+    }));
+    const t0 = performance.now();
+    const frame = (t) => {
+      ctx.clearRect(0, 0, innerWidth, innerHeight);
+      const running = t - t0 < 7000;
+      for (const b of bits) {
+        b.x += b.vx + Math.sin((t + b.y) / 600) * 0.6;
+        b.y += b.vy;
+        b.r += b.vr;
+        if (b.y > innerHeight + 20 && running) b.y = -20;
+        ctx.save();
+        ctx.translate(b.x, b.y);
+        ctx.rotate(b.r);
+        ctx.fillStyle = b.c;
+        ctx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h * Math.abs(Math.cos(b.r * 2)));
+        ctx.restore();
+      }
+      if (running || bits.some((b) => b.y < innerHeight + 20)) requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  }
+</script>
+
+<style>
+  .bday {
+    position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 24px var(--gut);
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    transition: opacity 0.5s;
+  }
+  .bday.out { opacity: 0; }
+  .bday canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .bday-card {
+    position: relative; width: min(100%, 380px); padding: 34px 26px 28px; rotate: -2deg; text-align: center;
+    background: var(--paper); box-shadow: 0 24px 40px -18px rgba(40, 25, 15, 0.55);
+    animation: pop 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+  }
+  .bday-cz { font: 400 clamp(2.4rem, 11vw, 3.4rem)/1 var(--f-disp); color: var(--red); }
+  .bday-en { margin-top: 10px; font: 600 1.6rem/1.15 var(--f-hand); color: var(--blue-ink); }
+  .bday button {
+    all: unset; cursor: pointer; margin-top: 22px; padding: 10px 18px; border-radius: 999px;
+    font: 600 0.75rem var(--f-ui); letter-spacing: 0.14em; text-transform: uppercase; color: #fff; background: var(--red);
+  }
+  .bday button:focus-visible { outline: 3px solid var(--blue-ink); outline-offset: 3px; }
+  @keyframes pop { from { opacity: 0; scale: 0.8; } }
+
+  .monthly {
+    position: fixed; left: 50%; top: calc(16px + env(safe-area-inset-top, 0px)); z-index: 40; translate: -50% 0;
+    padding: 10px 18px; rotate: -1.5deg; white-space: nowrap;
+    font: 700 1.4rem/1 var(--f-hand); color: var(--red); background: var(--paper);
+    box-shadow: 0 10px 22px -10px rgba(40, 25, 15, 0.5);
+    animation: drop-in 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+    transition: opacity 0.6s, translate 0.6s;
+  }
+  .monthly.out { opacity: 0; translate: -50% -20px; }
+  @keyframes drop-in { from { opacity: 0; translate: -50% -30px; } }
+  @media (prefers-reduced-motion: reduce) { .bday-card, .monthly { animation: none; } }
+</style>

@@ -1,0 +1,18 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base title="Muchachitos" description="This page got lost">
+  <main class="lost">
+    <p class="label">404</p>
+    <h1>This page got lost</h1>
+    <p class="hand">like us that one time looking for the restaurant</p>
+    <a href="/">back to the album →</a>
+  </main>
+</Base>
+
+<style>
+  .lost { min-height: 100svh; display: grid; place-content: center; gap: 10px; padding: 40px var(--gut); text-align: center; }
+  h1 { font: 400 clamp(2.4rem, 10vw, 4rem)/1 var(--f-disp); }
+  .hand { font: 500 1.4rem/1.2 var(--f-hand); color: var(--pen); }
+  a { margin-top: 18px; font: 700 1.5rem var(--f-hand); color: var(--red); }
+</style>

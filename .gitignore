@@ -1,0 +1,13 @@
+# build
+dist/
+.astro/
+node_modules/
+
+# original photos (they contain GPS location) never go to git
+photos-raw/
+
+.DS_Store
+.env
+
+# local notes (Spanish to-do list for the demo)
+TODO.md

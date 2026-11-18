@@ -1,0 +1,148 @@
+---
+import type { Chapter } from '../data/story';
+import { story } from '../data/story';
+import { photosFor, stampFor } from '../lib/photos';
+import ChapterHead from './ChapterHead.astro';
+import Polaroid from './Polaroid.astro';
+import Vinyl from './Vinyl.astro';
+
+interface Props { chapter: Chapter }
+const { chapter } = Astro.props;
+const photos = photosFor(chapter);
+const rots = [-3, 4, -1.5];
+const letter = chapter.letter;
+const heart = 'M50 86 C 20 64, 4 44, 14 26 C 22 12, 42 12, 50 30 C 58 12, 78 12, 86 26 C 96 44, 80 64, 50 86Z';
+---
+<section class="chapter" id={chapter.id}>
+  <ChapterHead chapter={chapter} />
+  {photos.length > 0 && (
+    <div class="board" data-gallery data-count={photos.length}>
+      {photos.map((p, i) => (
+        <Polaroid
+          photo={p}
+          stamp={stampFor(p, chapter)}
+          alt={p.caption ?? `${chapter.month} ${chapter.year}, photo ${i + 1}`}
+          rot={rots[i % rots.length]}
+          speed={i % 2 ? 0.05 : -0.04}
+        />
+      ))}
+    </div>
+  )}
+
+  {letter && story.song && <Vinyl />}
+
+  <!--
+    The envelope stays pinned at the bottom of the screen while the letter is pulled out of it
+    as you scroll, so a letter of any length can be read line by line. Without JS (or with
+    reduced motion) it's a static open envelope with the whole letter above it.
+  -->
+  {letter && (
+    <div class="envelope-scene" data-pull>
+     <div class="stage">
+      <div class="flap back" aria-hidden="true"><i></i></div>
+      <div class="letter">
+        {letter.opening && <p class="opening">{letter.opening}</p>}
+        {letter.body.map((line) => <p>{line}</p>)}
+        <p class="big">{letter.closing}</p>
+        <p class="sig">{letter.signature}</p>
+      </div>
+      <div class="envelope" aria-hidden="true">
+        <div class="pocket">
+          <p class="to">for {story.her}</p>
+          <div class="post"><svg viewBox="0 0 100 100"><path fill="currentColor" d={heart} /></svg><span>8·11</span></div>
+          <div class="postmark">{story.postmark}<br />{chapter.year}</div>
+        </div>
+        <div class="flap front"><i></i><b class="seal"><svg viewBox="0 0 100 100"><path fill="currentColor" d={heart} /></svg></b></div>
+      </div>
+     </div>
+    </div>
+  )}
+
+  <div class="next">
+    <p class="label">Next page · {story.next.date}</p>
+    <p class="soon">{story.next.text}</p>
+  </div>
+</section>
+
+<style>
+  /* --f: flap opening 0→1, --l: letter pulled out 0→1. Static default: both open. */
+  .envelope-scene { --f: 1; --l: 1; --env-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); width: min(100%, 440px); margin: 40px auto 0; }
+  .stage { position: relative; padding-top: 30px; overflow: hidden; perspective: 1100px; }
+  .letter {
+    position: relative; z-index: 2; width: 88%; margin: 0 auto -150px; padding: 24px 22px 170px;
+    font: 500 1.5rem/30px var(--f-hand); color: var(--blue-ink);
+    background: repeating-linear-gradient(transparent 0 29px, rgba(70, 90, 160, 0.2) 29px 30px), var(--paper);
+    background-position: 0 18px;
+    box-shadow: 0 -6px 20px -12px rgba(40, 25, 15, 0.45);
+  }
+  /* everything on the 30px ruling: new paragraphs are indented instead of spaced */
+  .letter p + p { text-indent: 1.4em; }
+
+  /* pinned mode, switched on by ScrollFx (it sets the height, --lift and --pp) */
+  .envelope-scene:global(.is-pulling) {
+    --f: clamp(0, calc(var(--pp, 0) / 0.1), 1);
+    --l: clamp(0, calc((var(--pp, 0) - 0.12) / 0.88), 1);
+    /* start right after the previous block instead of a screen of empty space */
+    margin-top: calc(-100svh + 330px); pointer-events: none;
+  }
+  /* clip the strip under the envelope so the bottom of the letter never peeks out */
+  .envelope-scene:global(.is-pulling) .stage { position: sticky; top: 0; height: 100svh; padding: 0; clip-path: inset(-100vh 0 var(--env-bottom) 0); }
+  .envelope-scene:global(.is-pulling) .envelope { position: absolute; left: 0; right: 0; bottom: var(--env-bottom); }
+  .envelope-scene:global(.is-pulling) .flap.back { bottom: calc(var(--env-bottom) + 100px); }
+  .envelope-scene:global(.is-pulling) .letter {
+    position: absolute; left: 6%; right: 6%; width: auto; margin: 0; padding-bottom: 40px;
+    top: calc(100% - var(--env-bottom) - 220px);
+    translate: 0 calc(var(--l) * var(--lift, 0px) * -1);
+  }
+  .opening { font: 700 1.7rem/30px var(--f-hand); color: #b8322a; }
+  .letter .opening + p { text-indent: 0; }
+  .big { margin-top: 30px; text-align: center; font: 700 3rem/60px var(--f-hand); color: #b8322a; text-indent: 0 !important; }
+  .sig { text-align: right; text-indent: 0 !important; }
+
+  /* stacking: open flap (1) < letter (2) < envelope (3, holds pocket + closed flap) */
+  .envelope { position: relative; z-index: 3; height: 240px; transform-style: preserve-3d; }
+  .pocket {
+    position: absolute; inset: 0; z-index: 3; border-radius: 4px;
+    background:
+      linear-gradient(to top right, transparent calc(50% - 1px), rgba(122, 46, 69, 0.14) 50%, transparent calc(50% + 1px)) left bottom / 50% 100% no-repeat,
+      linear-gradient(to top left, transparent calc(50% - 1px), rgba(122, 46, 69, 0.14) 50%, transparent calc(50% + 1px)) right bottom / 50% 100% no-repeat,
+      #f7ece6;
+    box-shadow: 0 18px 30px -16px rgba(40, 25, 15, 0.55);
+  }
+  .to { position: absolute; left: 24px; bottom: 34px; font: 700 2rem/1 var(--f-hand); color: var(--pen); rotate: -3deg; }
+  .post {
+    position: absolute; right: 20px; top: 70px; width: 58px; padding: 6px 4px 4px; rotate: 5deg;
+    display: grid; justify-items: center; gap: 2px; color: #fff6ef; background: #c93a4a;
+    border: 4px dotted #f7ece6; outline: 2px solid #fbfaf6;
+  }
+  .post svg { width: 24px; height: 24px; }
+  .post span { font: 0.95rem/1 var(--f-stamp); }
+  .postmark {
+    position: absolute; right: 64px; top: 92px; width: 70px; height: 70px; border-radius: 50%; rotate: -12deg;
+    display: grid; place-content: center; text-align: center;
+    border: 2px solid rgba(58, 34, 40, 0.45); color: rgba(58, 34, 40, 0.5); font: 0.9rem/1 var(--f-stamp);
+  }
+
+  .flap { position: absolute; left: 0; right: 0; top: 0; height: 140px; transform-origin: 50% 0; transform-style: preserve-3d; }
+  .flap i {
+    position: absolute; inset: 0; backface-visibility: hidden;
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+    background: linear-gradient(to bottom, #f2e2db, #ead3cb);
+  }
+  /* closed flap, in front of the pocket: visible until it is edge-on */
+  .flap.front { z-index: 4; transform: rotateX(calc(var(--f) * 180deg)); }
+  .flap.front i { filter: drop-shadow(0 2px 2px rgba(40, 25, 15, 0.15)); }
+  /* the same flap seen from behind once it has opened, behind the letter */
+  .flap.back { z-index: 1; top: auto; bottom: 100px; transform: rotateX(calc(var(--f) * 180deg)); }
+  .flap.back i { transform: rotateX(180deg); background: #e6cfc6; }
+  .seal {
+    position: absolute; left: 50%; top: 100%; width: 46px; height: 46px; translate: -50% -60%;
+    display: grid; place-items: center; border-radius: 50%; backface-visibility: hidden;
+    background: radial-gradient(circle at 35% 30%, #d4505f, #9c1f33 70%); color: #f7c9cf;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+  }
+  .seal svg { width: 22px; height: 22px; }
+
+  .next { margin-top: 80px; text-align: center; }
+  .soon { margin-top: 6px; font: 700 2rem/1.1 var(--f-hand); color: var(--red); }
+</style>

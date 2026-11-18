@@ -1,0 +1,25 @@
+---
+import type { Chapter } from '../data/story';
+
+interface Props { chapter: Chapter }
+const { chapter } = Astro.props;
+const num = chapter.num ?? chapter.id.split('-')[1];
+const heart = 'M50 86 C 20 64, 4 44, 14 26 C 22 12, 42 12, 50 30 C 58 12, 78 12, 86 26 C 96 44, 80 64, 50 86';
+---
+{num && <div class="mnum px" data-speed=".12" aria-hidden="true">{num}</div>}
+<header class="mhead">
+  <h2 class="mname">{chapter.month}<small>{chapter.subtitle ?? chapter.year}</small></h2>
+  {chapter.badge?.kind === 'postage' ? (
+    <div class="pstamp" aria-hidden="true">
+      <div>
+        <svg viewBox="0 0 100 100"><path fill="currentColor" d={`${heart}Z`} /></svg>
+        <p>{chapter.badge.text}</p>
+      </div>
+    </div>
+  ) : chapter.badge?.kind === 'rubber' ? (
+    <div class="rstamp" aria-hidden="true"><b>{chapter.badge.text}</b><span>{chapter.badge.label}</span></div>
+  ) : (
+    <svg class="doodle" viewBox="0 0 100 100" data-p aria-hidden="true"><path pathLength="1" d={heart} /></svg>
+  )}
+  <p class="mtitle">{chapter.title}</p>
+</header>

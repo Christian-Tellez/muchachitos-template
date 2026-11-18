@@ -1,0 +1,134 @@
+---
+import { getImage } from 'astro:assets';
+import { story } from '../data/story';
+import { photoByRef, photosFor, stampFor, type Photo } from '../lib/photos';
+import Polaroid from './Polaroid.astro';
+import Mixtape from './Mixtape.astro';
+
+const withPhotos = story.chapters.filter((c) => photosFor(c).length > 0);
+const picks: { photo: Photo; chapter: (typeof story.chapters)[number] }[] = story.hero.length
+  ? story.hero.flatMap((ref) => {
+      const photo = photoByRef(ref);
+      const chapter = story.chapters.find((c) => ref.startsWith(`${c.id}/`));
+      const placed = chapter && photosFor(chapter).find((p) => p.key === photo?.key);
+      return placed && chapter ? [{ photo: placed, chapter }] : [];
+    })
+  : [withPhotos.at(-3), withPhotos[0], withPhotos.find((c) => c.layout === 'night')]
+      .filter((c) => c !== undefined)
+      .map((c) => ({ photo: photosFor(c)[0], chapter: c }));
+// story.hero empty: three random photos on every visit, each from a different chapter.
+// The choice happens in an inline script right under the polaroids, before they paint.
+const random = story.hero.length === 0;
+const pool = random
+  ? await Promise.all(
+      story.chapters.flatMap((c) =>
+        photosFor(c).map(async (p) => {
+          const thumb = await getImage({ src: p.src, widths: [400, 700], format: 'webp' });
+          const w = Math.min(p.src.width, 1800);
+          const full = await getImage({ src: p.src, width: w, format: 'webp' });
+          return {
+            c: c.id,
+            src: thumb.src,
+            srcset: thumb.srcSet.attribute,
+            full: full.src,
+            w,
+            h: Math.round((p.src.height * w) / p.src.width),
+            stamp: stampFor(p, c),
+            alt: p.caption ?? `${c.month} ${c.year}`,
+            cap: p.caption ?? '',
+          };
+        }),
+      ),
+    )
+  : [];
+const layout = [
+  { rot: -8, speed: -0.12 },
+  { rot: 7, speed: 0.1 },
+  { rot: -2, speed: -0.03 },
+];
+const official = new Date(`${story.official}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+const firstMessage = new Date(`${story.firstMessage}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+---
+<section class="hero">
+  <h1 class="title">{story.title}</h1>
+  <p class="sub">{story.subtitle}</p>
+  <div class="stack" data-gallery>
+    {random ? layout.map((l) => (
+      <figure class="pol px" style={`--rot:${l.rot}deg`} data-speed={l.speed} data-hero-slot>
+        <i class="tape"></i>
+        <a class="shot zoom">
+          <img alt="" sizes="(min-width: 820px) 250px, 54vw" width="400" height="500" decoding="async" />
+          <span class="stamp"></span>
+        </a>
+        <figcaption></figcaption>
+      </figure>
+    )) : picks.slice(0, 3).map(({ photo, chapter }, i) => (
+      <Polaroid
+        photo={photo}
+        stamp={stampFor(photo, chapter)}
+        alt={photo.caption ?? `${chapter.month} ${chapter.year}`}
+        rot={layout[i].rot}
+        speed={layout[i].speed}
+        sizes="(min-width: 820px) 250px, 54vw"
+        eager
+      />
+    ))}
+    {random && (
+      <script is:inline define:vars={{ pool }}>
+        const slots = document.querySelectorAll('[data-hero-slot]');
+        const shuffled = pool.map((p) => [Math.random(), p]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
+        const picks = [];
+        const used = new Set();
+        for (const p of shuffled) if (picks.length < slots.length && !used.has(p.c)) { used.add(p.c); picks.push(p); }
+        for (const p of shuffled) if (picks.length < slots.length && !picks.includes(p)) picks.push(p);
+        slots.forEach((slot, i) => {
+          const p = picks[i];
+          if (!p) return slot.remove();
+          const img = slot.querySelector('img');
+          img.srcset = p.srcset;
+          img.src = p.src;
+          img.alt = p.alt;
+          const a = slot.querySelector('a');
+          a.href = p.full;
+          a.dataset.pswpWidth = p.w;
+          a.dataset.pswpHeight = p.h;
+          if (p.cap) a.dataset.caption = p.cap;
+          a.setAttribute('aria-label', `Open photo: ${p.alt}`);
+          slot.querySelector('.stamp').textContent = p.stamp;
+          slot.querySelector('figcaption').textContent = p.cap;
+        });
+      </script>
+    )}
+  </div>
+  <p class="count">together for <b data-days={story.official}>&nbsp;</b> days</p>
+  <p class="label since">officially since {official} · first message {firstMessage}</p>
+  <Mixtape />
+  <p class="label hint">Scroll down</p>
+</section>
+
+<style>
+  .hero { padding: 48px var(--gut) 24px; text-align: center; }
+  .title { font: 400 clamp(3rem, 14vw, 8rem)/0.9 var(--f-disp); letter-spacing: -0.01em; }
+  /* above the polaroids: the right one drifts up a little with the parallax */
+  .title, .sub { position: relative; z-index: 2; }
+  .sub { margin-top: 6px; font: 500 1.6rem/1 var(--f-hand); color: var(--pen); }
+  .stack { position: relative; height: clamp(330px, 95vw, 460px); max-width: 560px; margin: 52px auto 0; }
+  .stack :global(.pol) { position: absolute; width: min(54%, 250px); text-align: left; }
+  .stack :global(.pol:nth-child(1)) { left: 2%; top: 30px; }
+  .stack :global(.pol:nth-child(2)) { right: 2%; top: 0; }
+  .stack :global(.pol:nth-child(3)) { left: 23%; top: 110px; }
+  .count { margin-top: 22px; font: 500 1.7rem/1.2 var(--f-hand); }
+  .count b { font: 400 2.4rem var(--f-disp); color: var(--red); font-variant-numeric: tabular-nums; }
+  .since { margin-top: 8px; }
+  @media (prefers-reduced-motion: no-preference) {
+    .title, .sub { animation: rise 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+    .sub { animation-delay: 0.12s; }
+    .stack :global(.pol) { animation: drop 1s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+    .stack :global(.pol:nth-child(1)) { animation-delay: 0.35s; }
+    .stack :global(.pol:nth-child(2)) { animation-delay: 0.5s; }
+    .stack :global(.pol:nth-child(3)) { animation-delay: 0.7s; }
+  }
+  @keyframes rise { from { opacity: 0; translate: 0 14px; } }
+  @keyframes drop { from { opacity: 0; translate: 0 -70px; scale: 1.08; } }
+  .hint { margin-top: 22px; }
+</style>

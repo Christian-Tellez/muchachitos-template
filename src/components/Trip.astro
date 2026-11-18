@@ -1,0 +1,164 @@
+---
+import type { Chapter, TripStop } from '../data/story';
+import { photosFor } from '../lib/photos';
+import ChapterHead from './ChapterHead.astro';
+import PhotoStrip from './PhotoStrip.astro';
+import Camcorder from './Camcorder.astro';
+import { videosFor } from '../lib/videos';
+
+interface Props { chapter: Chapter }
+const { chapter } = Astro.props;
+const trip = chapter.trip!;
+const photos = photosFor(chapter);
+
+// A photo belongs to the stop whose [from, next stop's from) range contains its date; the last stop also keeps its last day.
+// Videos go the same way, each in its own camcorder above that stop's photos.
+const stopFor = (p: { date?: string }) => {
+  if (!p.date) return trip.stops.length - 1;
+  const i = trip.stops.findLastIndex((s) => p.date! >= s.from);
+  return Math.max(0, i);
+};
+const videos = videosFor(chapter);
+const groups = trip.stops.map((stop, i) => ({
+  stop,
+  photos: photos.filter((p) => stopFor(p) === i),
+  videos: videos.filter((v) => stopFor(v) === i),
+}));
+const MON = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+const camStamp = (iso?: string) => {
+  if (!iso) return String(chapter.year);
+  const [y, m, d] = iso.split('-');
+  return `${+d} ${MON[+m - 1]} ${y}`;
+};
+
+const day = (iso: string) => {
+  const [, m, d] = iso.split('-');
+  return `${d}.${m}`;
+};
+const icon = {
+  plane: 'M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z',
+  car: 'M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11h1a1 1 0 0 1 1 1v5h-2v2h-2v-2H7v2H5v-2H3v-5a1 1 0 0 1 1-1zm2.2 0h9.6l-1-3.2a1 1 0 0 0-1-.8H9.2a1 1 0 0 0-1 .8zM7 15.5A1.5 1.5 0 1 0 7 12.5a1.5 1.5 0 0 0 0 3zm10 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z',
+};
+const Leg = (mode: 'plane' | 'car') => icon[mode];
+const alt = (stop: TripStop, i: number) => `${stop.name}, photo ${i + 1}`;
+---
+<section class="chapter trip" id={chapter.id}>
+  <ChapterHead chapter={chapter} />
+
+  <div class="pass px" style="--rot:-2deg" data-speed=".03" aria-label={`Boarding pass ${trip.pass.fromCity} to ${trip.pass.toCity}, ${trip.pass.date}`}>
+    <div class="main">
+      <p class="k">Boarding pass</p>
+      <div class="route-codes">
+        <div><b>{trip.pass.from}</b><span>{trip.pass.fromCity}</span></div>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d={icon.plane} transform="rotate(90 12 12)" /></svg>
+        <div><b>{trip.pass.to}</b><span>{trip.pass.toCity}</span></div>
+      </div>
+      <dl>
+        <div><dt>Passengers</dt><dd>2 muchachitos</dd></div>
+        <div><dt>Date</dt><dd>{trip.pass.date}</dd></div>
+        <div><dt>Seat</dt><dd>next to you</dd></div>
+      </dl>
+    </div>
+    <div class="stub" aria-hidden="true"><i class="barcode"></i></div>
+  </div>
+
+  <div class="route" data-through>
+    <div class="line" aria-hidden="true">
+      <svg class="plane" viewBox="0 0 24 24"><path fill="currentColor" d={icon.plane} transform="rotate(180 12 12)" /></svg>
+    </div>
+
+    {groups.map(({ stop, photos, videos }, gi) => (
+      <div class="stop">
+        <p class="leg">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d={Leg(stop.arrive.mode)} /></svg>
+          {stop.arrive.label}
+        </p>
+        <div class:list={['visa', { round: gi % 2 === 1 }]} style={`--ink:${stop.ink};--rot:${gi % 2 ? 7 : -6}deg`}>
+          <span class="country">España</span>
+          <b>{stop.name}</b>
+          <span class="dates">{day(stop.from)} – {day(stop.to)}</span>
+          {stop.region && <span class="region">{stop.region}</span>}
+        </div>
+        {stop.note && <p class="stop-note">{stop.note}</p>}
+        {videos.map((v) => (
+          <Camcorder video={v} stamp={camStamp(v.date)} label={`${stop.name}, a video`} />
+        ))}
+        {photos.length > 0 && (
+          <PhotoStrip
+            photos={photos}
+            chapter={chapter}
+            label={`${stop.name} photos`}
+            alt={(i) => alt(stop, i)}
+          />
+        )}
+      </div>
+    ))}
+
+    <p class="leg home">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d={Leg(trip.home.mode)} /></svg>
+      {trip.home.label}
+    </p>
+  </div>
+
+  {chapter.czech && <div class="extras"><p class="cz">{chapter.czech.text}<small>{chapter.czech.translation}</small></p></div>}
+</section>
+
+<style>
+  /* boarding pass */
+  .pass {
+    position: relative; z-index: 2; width: min(100%, 420px); margin: 0 auto 10px;
+    display: grid; grid-template-columns: 1fr auto; color: #1f2a3a; background: #f7f4ee;
+    border-radius: 14px; box-shadow: 0 16px 28px -14px rgba(40, 25, 15, 0.55);
+  }
+  .main { padding: 16px 18px 16px 20px; border-right: 2px dashed rgba(31, 42, 58, 0.25); min-width: 0; }
+  .k { font: 600 0.62rem var(--f-ui); letter-spacing: 0.2em; text-transform: uppercase; color: #8e2340; }
+  .route-codes { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; margin-top: 8px; }
+  .route-codes b { display: block; font: 400 2.4rem/1 var(--f-disp); }
+  .route-codes span { font: 500 0.72rem var(--f-ui); color: #5d6675; }
+  .route-codes div:last-child { text-align: right; }
+  .route-codes svg { width: 26px; height: 26px; justify-self: center; color: #8e2340; }
+  dl { display: grid; grid-template-columns: repeat(3, auto); justify-content: space-between; gap: 8px; margin: 14px 0 0; }
+  dt { font: 600 0.55rem var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: #5d6675; }
+  dd { margin: 3px 0 0; font: 1.05rem/1 var(--f-stamp); }
+  .stub { display: grid; place-items: center; padding: 14px 12px; }
+  .barcode {
+    display: block; width: 34px; height: 100%; min-height: 110px;
+    background: repeating-linear-gradient(0deg, #1f2a3a 0 2px, transparent 2px 4px, #1f2a3a 4px 5px, transparent 5px 8px, #1f2a3a 8px 11px, transparent 11px 13px);
+  }
+
+  /* dotted route with a plane that follows the scroll */
+  .route { position: relative; max-width: 980px; margin: 0 auto; padding: 30px 0 10px; }
+  .line {
+    position: absolute; left: 50%; top: 0; bottom: 0; width: 0; translate: -1px 0;
+    border-left: 2px dashed color-mix(in srgb, var(--pen) 45%, transparent);
+  }
+  .plane {
+    position: absolute; left: -15px; top: calc(var(--pt, 0) * 100%); width: 28px; height: 28px; z-index: 5;
+    color: var(--pen); filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.25));
+  }
+  .stop { position: relative; display: flex; flex-direction: column; align-items: center; padding-top: 40px; }
+  .leg {
+    position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px;
+    border-radius: 999px; background: var(--bg);
+    font: 600 0.7rem var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--mute);
+  }
+  .leg svg { width: 16px; height: 16px; color: var(--pen); }
+  .leg.home { display: flex; width: max-content; max-width: 100%; margin: 50px auto 0; }
+
+  /* passport stamp */
+  .visa {
+    position: relative; z-index: 1; margin-top: 26px; padding: 12px 18px 10px; min-width: 180px;
+    display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center;
+    color: var(--ink); border: 3px solid var(--ink); border-radius: 10px; outline: 1px solid var(--ink); outline-offset: -8px;
+    background: color-mix(in srgb, var(--bg) 82%, transparent); opacity: 0.9;
+  }
+  .visa.round { width: 170px; height: 170px; border-radius: 50%; justify-content: center; min-width: 0; padding: 18px; }
+  .country { font: 600 0.6rem var(--f-ui); letter-spacing: 0.3em; text-transform: uppercase; }
+  .visa b { font: 400 1.7rem/1 var(--f-disp); text-transform: uppercase; letter-spacing: 0.02em; }
+  .dates { font: 1.2rem/1 var(--f-stamp); letter-spacing: 0.06em; }
+  .region { font: 600 0.56rem var(--f-ui); letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.8; }
+  .stop-note { position: relative; z-index: 1; margin-top: 14px; padding: 0 10px; background: var(--bg); font: 600 1.5rem/1.1 var(--f-hand); color: var(--pen); }
+  @media (prefers-reduced-motion: reduce) {
+    .plane { display: none; }
+  }
+</style>

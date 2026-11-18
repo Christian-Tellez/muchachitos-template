@@ -1,0 +1,144 @@
+---
+import type { Video } from '../lib/videos';
+
+// A video in an old handycam viewfinder: REC, a running timecode, battery, date stamp.
+// It plays muted and looped while it's on screen; "tap for sound" turns the sound on
+// (and pauses the Spotify music); playing music mutes it again.
+interface Props {
+  video: Video;
+  stamp: string;
+  caption?: string;
+  sound?: boolean;
+  label: string;
+}
+const { video, stamp, caption, sound = true, label } = Astro.props;
+---
+<figure class="cam px" style="--rot:-1.5deg" data-speed=".03">
+  <div class="screen">
+    <video
+      src={video.src}
+      poster={video.poster}
+      muted
+      loop
+      playsinline
+      preload="metadata"
+      aria-label={label}
+    ></video>
+    <div class="hud" aria-hidden="true">
+      <span class="rec"><i></i>REC</span>
+      <span class="tc">00:00:00</span>
+      <span class="batt"><i></i></span>
+      <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+      <span class="date">{stamp}</span>
+    </div>
+    <button class="play" type="button" aria-label="Play the video" hidden></button>
+  </div>
+  {sound && <button class="sound" type="button" aria-pressed="false">🔊 tap for sound</button>}
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>
+
+<script>
+  import { pauseAllMusic } from '../lib/spotify';
+
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  const pad = (n: number) => String(Math.floor(n)).padStart(2, '0');
+
+  document.querySelectorAll<HTMLElement>('.cam').forEach((cam) => {
+    const video = cam.querySelector('video')!;
+    const tc = cam.querySelector<HTMLElement>('.tc')!;
+    const playBtn = cam.querySelector<HTMLButtonElement>('.play')!;
+    const soundBtn = cam.querySelector<HTMLButtonElement>('.sound');
+    let visible = false;
+    let userPaused = false;
+
+    const setPlaying = (on: boolean) => cam.classList.toggle('playing', on);
+    const tryPlay = () => video.play().then(() => setPlaying(true)).catch(() => (playBtn.hidden = false));
+
+    // play only while on screen (saves battery and data); with reduced motion, wait for a tap
+    new IntersectionObserver(
+      ([e]) => {
+        visible = e.isIntersecting;
+        if (visible && !userPaused && !reduced.matches) tryPlay();
+        if (!visible) { video.pause(); setPlaying(false); }
+      },
+      { threshold: 0.35 },
+    ).observe(video);
+    if (reduced.matches) playBtn.hidden = false;
+
+    playBtn.addEventListener('click', () => { playBtn.hidden = true; userPaused = false; tryPlay(); });
+    video.addEventListener('click', () => {
+      if (video.paused) { userPaused = false; tryPlay(); }
+      else { userPaused = true; video.pause(); setPlaying(false); playBtn.hidden = false; }
+    });
+    video.addEventListener('timeupdate', () => {
+      const t = video.currentTime;
+      tc.textContent = `${pad(t / 3600)}:${pad((t / 60) % 60)}:${pad(t % 60)}`;
+    });
+
+    const setSound = (on: boolean) => {
+      video.muted = !on;
+      if (!soundBtn) return;
+      soundBtn.setAttribute('aria-pressed', String(on));
+      soundBtn.textContent = on ? '🔇 mute' : '🔊 tap for sound';
+    };
+    soundBtn?.addEventListener('click', () => {
+      const on = video.muted;
+      if (on) {
+        pauseAllMusic();
+        video.currentTime = 0;
+        userPaused = false;
+        tryPlay();
+      }
+      setSound(on);
+    });
+    // the cassette or the vinyl started: the video goes quiet again
+    addEventListener('muchachitos:music', () => setSound(false));
+  });
+</script>
+
+<style>
+  .cam {
+    width: min(78vw, 330px); margin: 18px auto 0; padding: 14px 14px 12px; border-radius: 22px;
+    background: linear-gradient(160deg, #3a3437, #1c191b);
+    box-shadow: 0 22px 36px -16px rgba(40, 25, 15, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+  .screen { position: relative; overflow: hidden; border-radius: 10px; background: #000; aspect-ratio: 9 / 16; }
+  video { display: block; width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
+
+  /* viewfinder overlay */
+  .hud { position: absolute; inset: 0; pointer-events: none; color: #f6f3ee; font: 1.15rem/1 var(--f-stamp); letter-spacing: 0.06em; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7); }
+  .rec { position: absolute; top: 12px; left: 14px; display: flex; align-items: center; gap: 6px; }
+  .rec i { width: 9px; height: 9px; border-radius: 50%; background: #ff3b3b; box-shadow: 0 0 6px #ff3b3b; }
+  .playing .rec i { animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .tc { position: absolute; top: 12px; right: 14px; font-variant-numeric: tabular-nums; }
+  .batt { position: absolute; top: 34px; right: 14px; width: 22px; height: 11px; border: 1.5px solid currentColor; border-radius: 2px; }
+  .batt::after { content: ''; position: absolute; right: -4px; top: 2px; width: 2px; height: 4px; background: currentColor; }
+  .batt i { position: absolute; inset: 1.5px; right: 6px; background: currentColor; }
+  .date { position: absolute; left: 14px; bottom: 12px; color: var(--stamp); text-shadow: 0 0 6px rgba(255, 138, 42, 0.8); }
+  .corner { position: absolute; width: 18px; height: 18px; border: 2px solid rgba(246, 243, 238, 0.75); }
+  .tl { top: 44px; left: 12px; border-right: 0; border-bottom: 0; }
+  .tr { top: 56px; right: 12px; border-left: 0; border-bottom: 0; }
+  .bl { bottom: 36px; left: 12px; border-right: 0; border-top: 0; }
+  .br { bottom: 36px; right: 12px; border-left: 0; border-top: 0; }
+
+  .play {
+    all: unset; cursor: pointer; position: absolute; inset: 0; margin: auto; width: 64px; height: 64px; border-radius: 50%;
+    background: rgba(246, 243, 238, 0.9); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  }
+  .play[hidden] { display: none; }
+  .play::after {
+    content: ''; position: absolute; left: 25px; top: 20px;
+    border-left: 20px solid #1c191b; border-top: 12px solid transparent; border-bottom: 12px solid transparent;
+  }
+  .play:focus-visible, .sound:focus-visible { outline: 3px solid var(--red); outline-offset: 3px; }
+
+  .sound {
+    all: unset; cursor: pointer; display: block; margin: 12px auto 0; padding: 7px 14px; border-radius: 999px;
+    font: 600 0.72rem var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: #f6f3ee;
+    background: rgba(255, 255, 255, 0.1);
+  }
+  .sound[aria-pressed='true'] { background: var(--red); }
+  figcaption { margin-top: 10px; text-align: center; font: 600 1.3rem/1.1 var(--f-hand); color: #f6f3ee; }
+  @media (prefers-reduced-motion: reduce) { .playing .rec i { animation: none; } }
+</style>

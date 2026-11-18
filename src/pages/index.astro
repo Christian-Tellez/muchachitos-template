@@ -1,0 +1,56 @@
+---
+import Base from '../layouts/Base.astro';
+import Hero from '../components/Hero.astro';
+import Prologue from '../components/Prologue.astro';
+import Collage from '../components/Collage.astro';
+import Night from '../components/Night.astro';
+import Film from '../components/Film.astro';
+import Finale from '../components/Finale.astro';
+import Trip from '../components/Trip.astro';
+import Festival from '../components/Festival.astro';
+import { photosFor } from '../lib/photos';
+import { videosFor } from '../lib/videos';
+import ScrollFx from '../components/ScrollFx.astro';
+import Lightbox from '../components/Lightbox.astro';
+import Surprises from '../components/Surprises.astro';
+import Secrets from '../components/Secrets.astro';
+import { story } from '../data/story';
+
+// Photo-only chapters disappear while their folder is empty (a video counts too)
+const photoOnly = new Set(['collage', 'film', 'festival']);
+const chapters = story.chapters.filter(
+  (c) => !photoOnly.has(c.layout) || photosFor(c).length > 0 || videosFor(c).length > 0,
+);
+---
+<Base title={story.title} description={story.subtitle}>
+  <main>
+    <Hero />
+    {chapters.map((chapter) =>
+      chapter.layout === 'prologue' ? <Prologue chapter={chapter} />
+      : chapter.layout === 'night' ? <Night chapter={chapter} since={story.official} />
+      : chapter.layout === 'film' ? <Film chapter={chapter} />
+      : chapter.layout === 'festival' ? <Festival chapter={chapter} />
+      : chapter.layout === 'trip' ? <Trip chapter={chapter} />
+      : chapter.layout === 'finale' ? <Finale chapter={chapter} />
+      : <Collage chapter={chapter} />
+    )}
+  </main>
+  {story.credit && (
+    <footer class="credit">
+      made with <a href="https://github.com/Christian-Tellez/muchachitos-template" target="_blank" rel="noopener">Muchachitos</a> · by Christian Tellez
+    </footer>
+  )}
+  <ScrollFx />
+  <Lightbox />
+  <Surprises />
+  <Secrets />
+</Base>
+
+<style>
+  .credit {
+    padding: 28px 16px calc(28px + env(safe-area-inset-bottom)); text-align: center;
+    font: 500 0.72rem var(--f-ui); letter-spacing: 0.08em; color: var(--mute);
+  }
+  .credit a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+  .credit a:hover { color: var(--red); }
+</style>

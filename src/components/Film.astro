@@ -1,0 +1,43 @@
+---
+import type { Chapter } from '../data/story';
+import { photosFor, stampFor } from '../lib/photos';
+import ChapterHead from './ChapterHead.astro';
+import Polaroid from './Polaroid.astro';
+
+interface Props { chapter: Chapter }
+const { chapter } = Astro.props;
+const photos = photosFor(chapter);
+---
+<section class="pin" id={chapter.id} data-pin>
+  <div class="sticky">
+    <div class="head"><ChapterHead chapter={chapter} /></div>
+    <slot />
+    <div class="track" data-gallery>
+      {photos.map((p, i) => (
+        <Polaroid
+          photo={p}
+          stamp={stampFor(p, chapter)}
+          alt={p.caption ?? `${chapter.month} ${chapter.year}, photo ${i + 1}`}
+          rot={i % 2 ? 2 : -2.5}
+          sizes="(min-width: 820px) 300px, 64vw"
+        />
+      ))}
+    </div>
+    <p class="hint">keep scrolling, the film moves →</p>
+  </div>
+</section>
+
+<style>
+  .pin { position: relative; }
+  .sticky { position: sticky; top: 0; height: 100svh; overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
+  .head { position: relative; padding: 0 var(--gut); }
+  .head :global(.mhead) { margin-bottom: 22px; }
+  .head :global(.mnum) { top: -40px; }
+  .track { display: flex; gap: 22px; width: max-content; padding: 18px var(--gut); will-change: transform; }
+  .track :global(.pol) { flex: 0 0 auto; width: min(62vw, 300px, 34svh); }
+  .track :global(.pol:nth-child(even)) { margin-top: 26px; }
+  .hint { padding: 14px var(--gut) 0; font: 500 1.2rem var(--f-hand); color: var(--pen); }
+  :global(.rm) .sticky { position: static; height: auto; padding-block: 20px; }
+  :global(.rm) .track { width: auto; overflow-x: auto; }
+  :global(.rm) .hint { display: none; }
+</style>

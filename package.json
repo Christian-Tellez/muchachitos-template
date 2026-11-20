@@ -4,7 +4,7 @@
   "type": "module",
   "version": "1.0.0",
   "private": true,
-  "author": "Christian Tellez (https://github.com/Christian-Tellez)",
+  "author": "Christian Téllez Giraldo (https://github.com/Christian-Tellez)",
   "license": "SEE LICENSE IN LICENSE.md",
   "scripts": {
     "dev": "astro dev",

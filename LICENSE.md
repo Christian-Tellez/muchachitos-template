@@ -1,4 +1,4 @@
-Required Notice: Copyright (c) 2026 Christian Tellez (https://github.com/Christian-Tellez)
+Required Notice: Copyright (c) 2026 Christian Téllez Giraldo (https://github.com/Christian-Tellez)
 
 # PolyForm Noncommercial License 1.0.0
 

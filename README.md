@@ -93,6 +93,6 @@ Every push to `main` publishes the site again.
 
 ## License
 
-[PolyForm Noncommercial 1.0.0](LICENSE.md) © Christian Tellez.
+[PolyForm Noncommercial 1.0.0](LICENSE.md) © Christian Téllez Giraldo.
 
 You're welcome to use it for your own album, as a gift, or to learn from it. You may not sell it, or sell albums made with it. Please keep the license and the copyright notice. If you'd like to use it commercially, get in touch.

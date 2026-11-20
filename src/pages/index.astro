@@ -15,6 +15,7 @@ import Lightbox from '../components/Lightbox.astro';
 import Surprises from '../components/Surprises.astro';
 import Secrets from '../components/Secrets.astro';
 import { story } from '../data/story';
+import { about } from '../data/about';
 
 // Photo-only chapters disappear while their folder is empty (a video counts too)
 const photoOnly = new Set(['collage', 'film', 'festival']);
@@ -37,7 +38,7 @@ const chapters = story.chapters.filter(
   </main>
   {story.credit && (
     <footer class="credit">
-      made with <a href="https://github.com/Christian-Tellez/muchachitos-template" target="_blank" rel="noopener">Muchachitos</a> · by Christian Tellez
+      made with <a href="https://github.com/Christian-Tellez/muchachitos-template" target="_blank" rel="noopener">Muchachitos</a> · by <a href="/about">{about.name}</a>
     </footer>
   )}
   <ScrollFx />

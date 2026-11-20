@@ -1,0 +1,147 @@
+---
+import Base from '../layouts/Base.astro';
+import { about } from '../data/about';
+
+const REPO = 'https://github.com/Christian-Tellez/muchachitos-template';
+const labels: Record<string, string> = { github: 'GitHub', linkedin: 'LinkedIn', website: 'Website', email: 'Email' };
+const links = Object.entries(about.links as Record<string, string | undefined>)
+  .filter(([, url]) => url)
+  .map(([key, url]) => ({ label: labels[key] ?? key, href: key === 'email' ? `mailto:${url}` : url! }));
+const meta = [about.role, about.location].filter(Boolean).join(' · ');
+
+// "How it's built": one index card each
+const notes = [
+  {
+    title: 'Static, no backend',
+    text: 'Astro builds the whole album into plain HTML, CSS and a little JavaScript. It is hosted for free on Cloudflare Pages, and every push to main publishes it again.',
+  },
+  {
+    title: 'A scroll engine without libraries',
+    text: 'Elements say what they react to (data-speed, data-pin, data-pull…). One requestAnimationFrame loop turns scroll position into CSS custom properties, and CSS does the rest: parallax, photos that develop, a film strip that scrolls sideways, a letter that slides out of its envelope.',
+  },
+  {
+    title: 'Photos, with privacy first',
+    text: 'A Node script numbers the originals by date, converts HEIC, fixes rotation, resizes them and strips every bit of metadata, GPS included. The originals never leave the laptop. Astro then serves responsive, lazy-loaded WebP.',
+  },
+  {
+    title: 'Video in a camcorder',
+    text: 'Videos play muted only while they are on screen, behind a viewfinder with REC, a running timecode and a date stamp. "Tap for sound" turns the sound on and pauses the music.',
+  },
+  {
+    title: 'Music that is ready when you are',
+    text: 'The Spotify players load about a screen and a half before you reach them, so they start instantly, and only one of them plays at a time.',
+  },
+  {
+    title: 'Small details',
+    text: 'Confetti on both birthdays, a "happy N months" note every month, a hidden message on the back of one polaroid. All the motion respects "reduce motion".',
+  },
+];
+---
+<Base title={`About · Muchachitos`} description="Who made Muchachitos and how it's built">
+  <main class="about">
+    <a class="back" href="/">← back to the album</a>
+
+    <section class="card">
+      <i class="tape" aria-hidden="true"></i>
+      <p class="label">made by</p>
+      <h1>{about.name}</h1>
+      {meta && <p class="meta">{meta}</p>}
+      {about.intro && <p class="intro">{about.intro}</p>}
+      {links.length > 0 && (
+        <p class="links">
+          {links.map((l) => <a href={l.href} target="_blank" rel="noopener">{l.label} ↗</a>)}
+        </p>
+      )}
+    </section>
+
+    <section class="story">
+      <h2>The story</h2>
+      <p>
+        Muchachitos started as a birthday present for my girlfriend: our first year together, month by month,
+        made to be scrolled on a phone. Friends liked it, so I turned it into a template anyone can use.
+      </p>
+      <p class="hand">
+        This demo is our album in disguise: real photos without faces, a fictional couple with our names swapped
+        into each other's languages, and every date moved one year later.
+      </p>
+    </section>
+
+    <section class="built">
+      <h2>How it's built</h2>
+      <ol>
+        {notes.map((n, i) => (
+          <li style={`--rot:${i % 2 ? 0.8 : -0.8}deg`}>
+            <span class="n">{String(i + 1).padStart(2, '0')}</span>
+            <h3>{n.title}</h3>
+            <p>{n.text}</p>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <section class="use">
+      <h2>Make your own</h2>
+      <p>
+        The code is on GitHub with a step-by-step README: your photos, your dates, your words, and a free site of your own.
+        Free for personal, non-commercial use.
+      </p>
+      <a class="cta" href={REPO} target="_blank" rel="noopener">muchachitos-template on GitHub ↗</a>
+    </section>
+  </main>
+</Base>
+
+<style>
+  .about { max-width: 720px; margin: 0 auto; padding: 28px var(--gut) 72px; }
+  .back { font: 700 1.3rem var(--f-hand); color: var(--red); text-decoration: none; }
+  .back:hover { text-decoration: underline; }
+  h2 { margin: 0 0 14px; font: 400 clamp(1.9rem, 8vw, 2.6rem)/1 var(--f-disp); }
+
+  /* the "made by" card: paper, tape and a slight tilt */
+  .card {
+    position: relative; margin: 34px 0 56px; padding: 34px 26px 26px; rotate: -1deg;
+    background: var(--paper); box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08), 0 18px 30px -14px rgba(40, 25, 15, 0.5);
+  }
+  .tape {
+    position: absolute; top: -12px; left: 50%; width: 110px; height: 26px; translate: -50% 0; rotate: 3deg;
+    background: rgba(244, 165, 185, 0.75);
+  }
+  .label { margin: 0; font: 600 0.72rem var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--mute); }
+  h1 { margin: 6px 0 0; font: 400 clamp(2.3rem, 10vw, 3.4rem)/1 var(--f-disp); }
+  .meta { margin: 10px 0 0; font: 1.25rem/1 var(--f-stamp); letter-spacing: 0.06em; color: var(--stamp); }
+  .intro { margin: 16px 0 0; font: 600 1.6rem/1.2 var(--f-hand); color: var(--blue-ink); }
+  .links { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0 0; }
+  .links a {
+    padding: 8px 14px; border-radius: 999px; background: var(--bg); color: var(--ink); text-decoration: none;
+    font: 600 0.78rem var(--f-ui); letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .links a:hover { background: var(--red); color: var(--paper); }
+
+  .story { margin-bottom: 56px; }
+  .story p { margin: 0 0 14px; font-size: 1.05rem; line-height: 1.6; }
+  .story .hand { font: 600 1.45rem/1.25 var(--f-hand); color: var(--pen); }
+
+  /* index cards with a ruled top line */
+  .built ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 18px; }
+  .built li {
+    position: relative; padding: 18px 20px 16px; rotate: var(--rot);
+    background: var(--paper);
+    box-shadow: 0 10px 20px -12px rgba(40, 25, 15, 0.45);
+  }
+  .n { position: absolute; top: 16px; right: 18px; font: 1.2rem var(--f-stamp); color: var(--stamp); }
+  /* the red rule of an index card sits under the title, however many lines it takes */
+  h3 {
+    margin: 0 -20px 14px; padding: 0 56px 10px 20px; border-bottom: 1px solid rgba(176, 42, 60, 0.35);
+    font: 700 1.5rem/1.05 var(--f-hand); color: var(--pen);
+  }
+  .built p { margin: 0; line-height: 1.55; }
+  @media (min-width: 820px) { .built ol { grid-template-columns: 1fr 1fr; } }
+
+  .use { margin-top: 56px; text-align: center; }
+  .use p { margin: 0 auto 20px; max-width: 34em; line-height: 1.6; }
+  .cta {
+    display: inline-block; padding: 12px 22px; border-radius: 999px; background: var(--red); color: var(--paper);
+    text-decoration: none; font: 600 0.8rem var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .cta:hover { background: var(--pen); }
+  @media (prefers-reduced-motion: reduce) { .card, .built li { rotate: none; } }
+</style>

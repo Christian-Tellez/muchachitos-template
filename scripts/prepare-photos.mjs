@@ -52,8 +52,9 @@ if (months.length === 0) {
 
 const tmp = await mkdtemp(join(tmpdir(), 'muchachitos-'));
 const SHIFT = Number(process.argv.find((a) => a.startsWith('--shift-years='))?.split('=')[1] ?? 0);
-// moves every year (2026 → 2027 with --shift-years=1) in a date or a file name
-const shiftYears = (text) => (SHIFT ? text.replace(/20\d{2}/g, (y) => String(Number(y) + SHIFT)) : text);
+// moves the year (2026 → 2027 with --shift-years=1) in a date or a file name: only the first one,
+// so the digits of the time in names like img20260207212921 stay as they are
+const shiftYears = (text) => (SHIFT ? text.replace(/20\d{2}/, (y) => String(Number(y) + SHIFT)) : text);
 const slug = (name) => shiftYears(name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
 const pad = (n) => String(n).padStart(2, '0');
 // local date, not UTC: a photo taken at 00:30 should keep its own day

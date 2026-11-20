@@ -150,7 +150,7 @@ export const story = {
       badge: { kind: "postage", text: "14.2.2027" },
       note: "Heart-shaped everything. We pretended it was too cheesy. It wasn't.",
       czech: { text: "Moje lásko", translation: "my love" },
-      comments: { 3: { text: "you, pretending not to smile 🥺", style: "arrow" } },
+      comments: { 1: { text: "my favourite one 🥺", style: "arrow" } },
     },
     {
       id: "2027-03",
@@ -177,7 +177,7 @@ export const story = {
       title: "spring days",
       layout: "collage",
       note: "Long walks, sunsets and way too much ice cream.",
-      comments: { 3: { text: "Mmmm so tasty!", style: "bubble" } },
+      comments: { 2: { text: "we need to go back!", style: "bubble" } },
     },
     {
       id: "2027-06",
